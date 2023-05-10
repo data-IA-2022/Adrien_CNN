@@ -2,6 +2,7 @@ import os
 import zipfile
 
 import requests
+import tensorflow as tf
 
 from utils import get_size, relative_path
 
@@ -11,11 +12,6 @@ URL_IMG = "https://download.microsoft.com/download/3/E/1/3E1C3F21-ECDB-4869-8368
 DATA_FOLDER_NAME = "data"
 
 IMG_FOLDER = "PetImages"
-
-
-def print_folder_stats(path, indent=0):
-
-    print('\t' * indent + f"{os.path.basename(path):15} - size: {get_size(path)} - containing: {len(os.listdir(path))}")
 
 
 def main():
@@ -34,11 +30,27 @@ def main():
 
     path_img_folder = relative_path(DATA_FOLDER_NAME, IMG_FOLDER)
 
-    print_folder_stats(path_img_folder)
+    for folder_name in os.listdir(path_img_folder):
 
-    for folder in os.listdir(path_img_folder):
+        folder_path = os.path.join(path_img_folder, folder_name)
 
-        print_folder_stats(os.path.join(path_img_folder, folder), indent=1)
+        num_skipped = 0
+        for img_name in os.listdir(folder_path):
+
+            img_path = os.path.join(folder_path, img_name)
+
+            try:
+                fobj = open(img_path, "rb")
+                is_jfif = tf.compat.as_bytes("JFIF") in fobj.peek(10)
+            finally:
+                fobj.close()
+
+            if not is_jfif:
+                num_skipped += 1
+                # Delete corrupted image
+                os.remove(img_path)
+
+        print(f"{folder_name:15} - size: {get_size(folder_path)} - n° img: {len(os.listdir(folder_path))} - n° corrupted: {num_skipped}")
 
 
 if __name__ == "__main__":
