@@ -3,6 +3,8 @@ import zipfile
 
 import requests
 import tensorflow as tf
+from tensorflow.io import read_file, write_file
+from tensorflow.image import decode_image
 
 from utils import get_size, relative_path
 
@@ -35,20 +37,36 @@ def main():
         folder_path = os.path.join(path_img_folder, folder_name)
 
         num_skipped = 0
-        for img_name in os.listdir(folder_path):
 
+        for img_name in os.listdir(folder_path):
             img_path = os.path.join(folder_path, img_name)
+            is_jfif = True
+            should_remove = False
+
+            with open(img_path, "rb") as fobj:
+                is_jfif = tf.compat.as_bytes("JFIF") in fobj.peek(10)
 
             try:
-                fobj = open(img_path, "rb")
-                is_jfif = tf.compat.as_bytes("JFIF") in fobj.peek(10)
-            finally:
-                fobj.close()
+                img = read_file(img_path)
+                if not tf.io.is_jpeg(img):
+                    should_remove = True
 
-            if not is_jfif:
+                img = decode_image(img)
+
+                if img.ndim != 3:
+                    should_remove = True
+
+            except Exception as e:
+                should_remove = True
+
+            if (not is_jfif) or should_remove:
                 num_skipped += 1
                 # Delete corrupted image
                 os.remove(img_path)
+
+            else:
+                tmp = tf.io.encode_jpeg(img)
+                write_file(img_path, tmp)
 
         print(f"{folder_name:15} - size: {get_size(folder_path)} - n° img: {len(os.listdir(folder_path))} - n° corrupted: {num_skipped}")
 

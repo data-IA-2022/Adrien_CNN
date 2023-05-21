@@ -1,4 +1,9 @@
+from os import mkdir
+from os.path import join
+from time import strftime
+
 import matplotlib.pyplot as plt
+import pandas as pd
 import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import layers
@@ -6,11 +11,24 @@ from tensorflow.keras import layers
 from utils import relative_path
 
 
-def make_model(input_shape, num_classes):
+def make_model(input_shape, num_classes, data_augmentation = False):
     inputs = keras.Input(shape=input_shape)
 
+    if data_augmentation:
+        data_augmentation = keras.Sequential(
+            [
+                layers.RandomFlip("horizontal"),
+                layers.RandomRotation(0.1),
+            ]
+        )
+
+        x = data_augmentation(inputs)
+        x = layers.Rescaling(1./255)(x)
+
+    else:
+        x = inputs
+
     # Entry block
-    x = layers.Rescaling(1.0 / 255)(inputs)
     x = layers.Conv2D(128, 3, strides=2, padding="same")(x)
     x = layers.BatchNormalization()(x)
     x = layers.Activation("relu")(x)
@@ -55,7 +73,7 @@ def main():
     img_folder_path = relative_path("data", "PetImages")
 
     image_size = (180, 180)
-    batch_size = 128
+    batch_size = 16
 
     train_ds, val_ds = tf.keras.utils.image_dataset_from_directory(
         img_folder_path,
@@ -66,29 +84,34 @@ def main():
         batch_size = batch_size,
     )
 
-    # plt.figure(figsize=(10, 10))
-    # for images, labels in train_ds.take(1):
-    #     for i in range(9):
-    #         ax = plt.subplot(3, 3, i + 1)
-    #         plt.imshow(images[i].numpy().astype("uint8"))
-    #         plt.title(int(labels[i]))
-    #         plt.axis("off")
-    # plt.show()
-
-    # data_augmentation = keras.Sequential(
-    #     [
-    #         layers.RandomFlip("horizontal"),
-    #         layers.RandomRotation(0.1),
-    #     ]
-    # )
-
     model = make_model(input_shape=image_size + (3,), num_classes=2)
-    # keras.utils.plot_model(model, show_shapes=True)
 
-    epochs = 25
+    epochs = 3
+
+    stats = {"epoch":[], "loss":[], "accuracy":[], "val_loss":[], "val_accuracy":[]}
+
+    def addstats(epoch, logs):
+
+        for key in stats:
+            if key == "epoch":
+                stats["epoch"].append(epoch)
+            else:
+                stats[key].append(logs[key])
+
+
+    saves_folder = join("saves", strftime("%d-%m-%Y_%H:%M:%S"))
+
+    mkdir(saves_folder)
 
     callbacks = [
-        keras.callbacks.ModelCheckpoint("save_at_{epoch}.keras"),
+        keras.callbacks.ModelCheckpoint(
+            filepath = join(saves_folder, "Best.keras"),
+            monitor = "val_accuracy",
+            save_best_only = True
+            ),
+        keras.callbacks.LambdaCallback(
+                on_epoch_end = addstats
+            )
     ]
 
     model.compile(
@@ -103,6 +126,10 @@ def main():
         callbacks=callbacks,
         validation_data=val_ds,
     )
+
+    model.save(join(saves_folder, "Last.keras"))
+
+    pd.DataFrame(stats).to_csv(join(saves_folder, "stats.csv"), index=False)
 
 
 if __name__ == '__main__':

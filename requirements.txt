@@ -1,0 +1,4 @@
+matplotlib
+requests
+streamlit
+tensorflow==2.10.*
