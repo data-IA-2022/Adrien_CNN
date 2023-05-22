@@ -1,5 +1,5 @@
 from os import mkdir
-from os.path import join
+from os.path import join, exists
 from time import strftime
 
 import matplotlib.pyplot as plt
@@ -84,9 +84,9 @@ def main():
         batch_size = batch_size,
     )
 
-    model = make_model(input_shape=image_size + (3,), num_classes=2)
+    model = make_model(input_shape=image_size + (3,), num_classes=2, data_augmentation=True)
 
-    epochs = 3
+    epochs = 25
 
     stats = {"epoch":[], "loss":[], "accuracy":[], "val_loss":[], "val_accuracy":[]}
 
@@ -100,6 +100,9 @@ def main():
 
 
     saves_folder = join("saves", strftime("%d-%m-%Y_%H:%M:%S"))
+
+    if not exists("saves"):
+        mkdir("saves")
 
     mkdir(saves_folder)
 
