@@ -1,8 +1,7 @@
 from os import mkdir
-from os.path import join, exists
+from os.path import exists, join
 from time import strftime
 
-import matplotlib.pyplot as plt
 import pandas as pd
 import tensorflow as tf
 from tensorflow import keras

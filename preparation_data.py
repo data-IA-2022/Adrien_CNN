@@ -3,11 +3,10 @@ import zipfile
 
 import requests
 import tensorflow as tf
-from tensorflow.io import read_file, write_file
 from tensorflow.image import decode_image
+from tensorflow.io import read_file, write_file
 
 from utils import get_size, relative_path
-
 
 URL_IMG = "https://download.microsoft.com/download/3/E/1/3E1C3F21-ECDB-4869-8368-6DEBA77B919F/kagglecatsanddogs_5340.zip"
 
